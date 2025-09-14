@@ -1,0 +1,9 @@
+# Entorno virtual y cachés
+.venv/
+__pycache__/
+*.pyc
+
+# Configs locales / secretos
+.env
+.vscode/
+.idea/
