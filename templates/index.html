@@ -1,27 +1,35 @@
-{% extends "base.html" %}
-{% block title %}Registrar Personas{% endblock %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}App{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="{{ url_for('index') }}">Evaluación</a>
+      <div class="nav-links">
+        <a href="{{ url_for('index') }}">Registrar</a>
+        <a href="{{ url_for('administrar') }}">Administrar</a>
+      </div>
+    </div>
+  </nav>
 
-{% block content %}
-<section class="card">
-  <h1 class="title">Registro de Personas</h1>
+  <main class="container">
+    {% with msgs = get_flashed_messages(with_categories=True) %}
+      {% if msgs %}
+        <div class="flash-wrap">
+          {% for cat, msg in msgs %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-  <form method="post" action="{{ url_for('guardar') }}" class="form-grid">
-    <label for="dni">DNI*</label>
-    <input id="dni" name="dni" maxlength="20" required>
-
-    <label for="nombre">Nombre*</label>
-    <input id="nombre" name="nombre" required>
-
-    <label for="apellido">Apellido*</label>
-    <input id="apellido" name="apellido" required>
-
-    <label for="direccion">Dirección</label>
-    <input id="direccion" name="direccion">
-
-    <label for="telefono">Teléfono</label>
-    <input id="telefono" name="telefono">
-
-    <button type="submit" class="btn btn-primary">Guardar</button>
-  </form>
-</section>
-{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
