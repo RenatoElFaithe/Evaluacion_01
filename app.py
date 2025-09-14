@@ -1,6 +1,26 @@
 import os
 import psycopg2
 from flask import Flask, render_template, request, redirect, url_for, flash
+import os, pathlib
+
+# 👇 deja esto arriba, antes de crear la app
+BASE_DIR = pathlib.Path(__file__).parent.resolve()
+
+from flask import Flask
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates"),
+    static_folder=str(BASE_DIR / "static"),
+)
+
+print(">>> CWD:", os.getcwd())
+print(">>> APP ROOT:", app.root_path)
+print(">>> TEMPLATES PATH:", app.template_folder)
+print(">>> STATIC PATH:", app.static_folder)
+print(">>> EXISTE index.html?:",
+      os.path.exists(os.path.join(app.template_folder, "index.html")))
+print(">>> LISTA RAÍZ:", os.listdir(BASE_DIR))
+
 
 # --- Configuración Flask ---
 app = Flask(__name__)
