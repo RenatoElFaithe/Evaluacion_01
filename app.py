@@ -1,38 +1,19 @@
 import os
 import psycopg2
+import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, flash
-import os, pathlib
 
-# 👇 deja esto arriba, antes de crear la app
-BASE_DIR = pathlib.Path(__file__).parent.resolve()
+# Flask
+app = Flask(__name__, static_folder="static", template_folder="templates")
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")  # necesario para flash()
 
-from flask import Flask
-app = Flask(
-    __name__,
-    template_folder=str(BASE_DIR / "templates"),
-    static_folder=str(BASE_DIR / "static"),
-)
-
-print(">>> CWD:", os.getcwd())
-print(">>> APP ROOT:", app.root_path)
-print(">>> TEMPLATES PATH:", app.template_folder)
-print(">>> STATIC PATH:", app.static_folder)
-print(">>> EXISTE index.html?:",
-      os.path.exists(os.path.join(app.template_folder, "index.html")))
-print(">>> LISTA RAÍZ:", os.listdir(BASE_DIR))
-
-
-# --- Configuración Flask ---
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
-
-# --- Conexión a Postgres por DATABASE_URL ---
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# Postgres (Render -> External Database URL)
+DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("Falta la variable de entorno DATABASE_URL")
 
 def get_conn():
-    # Render requiere sslmode=require
+    # En Render se requiere SSL
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 def ensure_table():
@@ -43,60 +24,67 @@ def ensure_table():
         nombre VARCHAR(100) NOT NULL,
         apellido VARCHAR(100) NOT NULL,
         direccion TEXT,
-        telefono VARCHAR(20)
+        telefono VARCHAR(20),
+        created_at TIMESTAMPTZ DEFAULT NOW()
     );
     """
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql)
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql)
         conn.commit()
 
 # --- Rutas ---
-@app.route("/")
+@app.get("/")
 def index():
+    # Página de registro
     return render_template("index.html")
 
 @app.post("/crear")
 def crear():
-    dni = request.form.get("dni", "").strip()
-    nombre = request.form.get("nombre", "").strip()
-    apellido = request.form.get("apellido", "").strip()
+    # Recoge datos del formulario
+    dni       = request.form.get("dni", "").strip()
+    nombre    = request.form.get("nombre", "").strip()
+    apellido  = request.form.get("apellido", "").strip()
     direccion = request.form.get("direccion", "").strip()
-    telefono = request.form.get("telefono", "").strip()
+    telefono  = request.form.get("telefono", "").strip()
 
+    # Validación sencilla
     if not dni or not nombre or not apellido:
         flash("DNI, Nombre y Apellido son obligatorios", "error")
         return redirect(url_for("index"))
 
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO personas (dni, nombre, apellido, direccion, telefono) VALUES (%s, %s, %s, %s, %s)",
-                (dni, nombre, apellido, direccion, telefono),
-            )
+    # Inserta
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO personas (dni, nombre, apellido, direccion, telefono)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (dni, nombre, apellido, direccion, telefono),
+        )
         conn.commit()
 
-    flash("Registro guardado correctamente", "ok")
+    flash("Persona registrada", "success")
     return redirect(url_for("index"))
 
-@app.get("/administrar")
+@app.get("/admin")
 def administrar():
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, dni, nombre, apellido, direccion, telefono FROM personas ORDER BY id DESC")
-            personas = cur.fetchall()
+    # Lista todo
+    with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT * FROM personas ORDER BY id DESC")
+        personas = cur.fetchall()
     return render_template("administrar.html", personas=personas)
 
 @app.post("/eliminar/<int:pid>")
 def eliminar(pid):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM personas WHERE id=%s", (pid,))
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("DELETE FROM personas WHERE id = %s", (pid,))
         conn.commit()
-    flash("Registro eliminado", "ok")
+    flash("Registro eliminado", "success")
     return redirect(url_for("administrar"))
 
+# Crear tabla al iniciar
+ensure_table()
+
 if __name__ == "__main__":
-    ensure_table()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    # Para local
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
