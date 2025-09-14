@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Administrar Personas{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1 class="title">Administrar</h1>
+
+  {% if personas|length == 0 %}
+    <p class="muted">No hay registros aún.</p>
+  {% else %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>DNI</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Dirección</th>
+            <th>Teléfono</th>
+            <th>Creado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in personas %}
+            <tr>
+              <td>{{ p.id }}</td>
+              <td>{{ p.dni }}</td>
+              <td>{{ p.nombre }}</td>
+              <td>{{ p.apellido }}</td>
+              <td>{{ p.direccion or '—' }}</td>
+              <td>{{ p.telefono or '—' }}</td>
+              <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '—' }}</td>
+              <td class="actions-mini">
+                <form method="post" action="{{ url_for('eliminar', pid=p.id) }}">
+                  <button class="btn danger" onclick="return confirm('Eliminar registro?')">Eliminar</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
